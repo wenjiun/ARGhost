@@ -40,6 +40,7 @@ class GhostNode(
     val ghostId: String,
     val floatPhase: Float,
     val basePosition: Position,
+    val spawnTime: Long,
     engine: Engine,
     radius: Float,
     materialInstance: MaterialInstance?
@@ -72,7 +73,7 @@ fun GameScreen(
     LaunchedEffect(uiState.gameState, uiState.planeDetected) {
         if (uiState.gameState == GameState.PLAYING && uiState.planeDetected) {
             while (uiState.gameState == GameState.PLAYING) {
-                delay(2200L) // Spawn every 2.2 seconds
+                delay(4400L) // Spawn every 4.4 seconds (50% slower spawn rate)
                 val frame = lastFrame
                 if (frame != null && frame.camera.trackingState == TrackingState.TRACKING) {
                     val cameraPose = frame.camera.pose
@@ -121,11 +122,15 @@ fun GameScreen(
                     viewModel.updatePlaneDetected(planes.any { it.trackingState == TrackingState.TRACKING })
                 }
 
-                // Update floating animation on each frame
-                val time = System.currentTimeMillis() / 1000f
+                // Update floating and rising animation on each frame
+                val currentTime = System.currentTimeMillis()
+                val time = currentTime / 1000f
                 activeGhostNodes.values.forEach { node ->
+                    // Slowly move upward: 0.15 meters per second
+                    val elapsedSeconds = (currentTime - node.spawnTime) / 1000f
+                    val riseOffset = elapsedSeconds * 0.15f
                     // Floating height offset using sine wave
-                    val newY = node.basePosition.y + sin(time * 3.5f + node.floatPhase) * 0.12f
+                    val newY = node.basePosition.y + riseOffset + sin(time * 3.5f + node.floatPhase) * 0.12f
                     node.position = Position(node.basePosition.x, newY, node.basePosition.z)
                 }
             },
@@ -148,6 +153,7 @@ fun GameScreen(
                                 ghostId = ghost.id,
                                 floatPhase = ghost.floatPhase,
                                 basePosition = ghost.position,
+                                spawnTime = ghost.spawnTime,
                                 engine = engine,
                                 radius = 0.18f, // 18cm radius placeholder sphere
                                 materialInstance = material

@@ -99,13 +99,13 @@ class GameViewModel : ViewModel() {
             }
         }
 
-        // Check for Ghost Timeout (despawn if not shot in 6 seconds)
+        // Check for Ghost Timeout (despawn if not shot in 12 seconds)
         ghostTimeoutJob = viewModelScope.launch {
             while (_uiState.value.gameState == GameState.PLAYING) {
                 delay(500L)
                 val currentTime = System.currentTimeMillis()
                 val activeGhosts = _uiState.value.ghosts
-                val timedOutGhosts = activeGhosts.filter { currentTime - it.spawnTime > 6000L }
+                val timedOutGhosts = activeGhosts.filter { currentTime - it.spawnTime > 12000L }
 
                 if (timedOutGhosts.isNotEmpty()) {
                     val nextLives = maxOf(0, _uiState.value.lives - timedOutGhosts.size)
@@ -136,8 +136,8 @@ class GameViewModel : ViewModel() {
         val distance = (20..35).random() / 10f // 2.0 to 3.5 meters
         val x = cameraX + distance * kotlin.math.cos(angle)
         val z = cameraZ + distance * kotlin.math.sin(angle)
-        // Spawn slightly offset from camera height
-        val y = cameraY + (-4..8).random() / 10f 
+        // Spawn exactly at ground level
+        val y = cameraY
 
         val neonColors = listOf(
             Color(0xFF39FF14), // Neon Lime Green

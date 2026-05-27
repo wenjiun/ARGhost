@@ -68,9 +68,9 @@ fun GameScreen(
     var lastFrame by remember { mutableStateOf<Frame?>(null) }
     var groundY by remember { mutableStateOf<Float?>(null) }
 
-    // Spawn loop when playing
-    LaunchedEffect(uiState.gameState) {
-        if (uiState.gameState == GameState.PLAYING) {
+    // Spawn loop when playing and plane is detected
+    LaunchedEffect(uiState.gameState, uiState.planeDetected) {
+        if (uiState.gameState == GameState.PLAYING && uiState.planeDetected) {
             while (uiState.gameState == GameState.PLAYING) {
                 delay(2200L) // Spawn every 2.2 seconds
                 val frame = lastFrame
@@ -80,8 +80,8 @@ fun GameScreen(
                     val cy = cameraPose.ty()
                     val cz = cameraPose.tz()
 
-                    // Anchor Y to ground plane if detected, otherwise camera height
-                    val gy = groundY ?: cy
+                    // Anchor Y to ground plane if detected, otherwise camera height - 1.2m (assume phone is held at 1.2m height)
+                    val gy = groundY ?: (cy - 1.2f)
                     viewModel.spawnGhost(cx, gy, cz)
                 }
             }
@@ -103,7 +103,7 @@ fun GameScreen(
         ARSceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
-            planeRenderer = true, // Visualizes detected planes
+            planeRenderer = !uiState.planeDetected, // Visualizes detected planes until one is detected
             onSessionUpdated = { session, frame ->
                 lastFrame = frame
 

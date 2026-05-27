@@ -45,8 +45,12 @@ class GameViewModel : ViewModel() {
     private var timerJob: Job? = null
     private var spawnJob: Job? = null
     private var ghostTimeoutJob: Job? = null
+    private var scanTimerJob: Job? = null
 
     fun updatePlaneDetected(detected: Boolean) {
+        if (detected) {
+            scanTimerJob?.cancel()
+        }
         _uiState.update { it.copy(planeDetected = detected) }
     }
 
@@ -54,6 +58,7 @@ class GameViewModel : ViewModel() {
         timerJob?.cancel()
         spawnJob?.cancel()
         ghostTimeoutJob?.cancel()
+        scanTimerJob?.cancel()
 
         _uiState.update {
             it.copy(
@@ -61,24 +66,35 @@ class GameViewModel : ViewModel() {
                 score = 0,
                 lives = 3,
                 timeRemaining = 60,
-                ghosts = emptyList()
+                ghosts = emptyList(),
+                planeDetected = false
             )
+        }
+
+        // Start fallback 10s scan timer
+        scanTimerJob = viewModelScope.launch {
+            delay(10000L)
+            if (!_uiState.value.planeDetected && _uiState.value.gameState == GameState.PLAYING) {
+                _uiState.update { it.copy(planeDetected = true) }
+            }
         }
 
         // Start Countdown Timer
         timerJob = viewModelScope.launch {
             while (_uiState.value.timeRemaining > 0 && _uiState.value.gameState == GameState.PLAYING) {
                 delay(1000L)
-                _uiState.update {
-                    val nextTime = it.timeRemaining - 1
-                    if (nextTime <= 0) {
-                        it.copy(timeRemaining = 0, gameState = GameState.GAME_OVER)
-                    } else {
-                        it.copy(timeRemaining = nextTime)
+                if (_uiState.value.planeDetected) {
+                    _uiState.update {
+                        val nextTime = it.timeRemaining - 1
+                        if (nextTime <= 0) {
+                            it.copy(timeRemaining = 0, gameState = GameState.GAME_OVER)
+                        } else {
+                            it.copy(timeRemaining = nextTime)
+                        }
                     }
-                }
-                if (_uiState.value.gameState == GameState.GAME_OVER) {
-                    checkAndSaveHighScore()
+                    if (_uiState.value.gameState == GameState.GAME_OVER) {
+                        checkAndSaveHighScore()
+                    }
                 }
             }
         }
@@ -170,5 +186,6 @@ class GameViewModel : ViewModel() {
         timerJob?.cancel()
         spawnJob?.cancel()
         ghostTimeoutJob?.cancel()
+        scanTimerJob?.cancel()
     }
 }
